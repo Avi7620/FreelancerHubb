@@ -1,0 +1,2139 @@
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import {
+  PlusCircle,
+  Users,
+  SettingsIcon,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  Star,
+  MapPin,
+  Calendar,
+  FileText,
+  Search,
+  Edit3,
+  User,
+  Bell,
+  CreditCard,
+  Shield,
+  Mail,
+  Phone,
+  LogOut,
+  HelpCircle,
+  ChevronDown,
+  X,
+  Camera,
+  Briefcase,
+} from "lucide-react";
+import API from "../../services/api";
+import CalendarDatePicker from "../client_dashboard/CalenderDatePicker";
+
+function ClientDashboard() {
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeSettingsSection, setActiveSettingsSection] = useState("profile");
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedAssignedProject, setSelectedAssignedProject] = useState(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const profileDropdownRef = useRef(null);
+
+  const [clientData, setClientData] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [projects, setProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchClientData = async () => {
+    let isMounted = true;
+
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+
+      const response = await API.get("/client/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (isMounted) {
+        if (response.data && response.data.success) {
+          setClientData(response.data.data);
+        } else {
+          setError(response.data?.message || "Invalid response structure");
+        }
+      }
+    } catch (err) {
+      if (isMounted) {
+        console.error("Profile fetch error:", err);
+        setError(err.response?.data?.message || "Failed to load profile data");
+      }
+    } finally {
+      if (isMounted) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const fetchProjects = useCallback(async () => {
+    try {
+      setLoadingProjects(true);
+      setError(null);
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+
+      const response = await API.get("/client/projects/with-status", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.data.success) {
+        setProjects(response.data.data);
+      } else {
+        setError(response.data.message || "Failed to fetch projects");
+      }
+    } catch (err) {
+      console.error("Error fetching projects:", err);
+      setError(err.response?.data?.message || "Failed to fetch projects");
+    } finally {
+      setLoadingProjects(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchClientData();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "dashboard") {
+      fetchProjects();
+    }
+  }, [activeTab, fetchProjects]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const Dashboard = () => {
+    if (loadingProjects) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <X className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+              <button
+                onClick={fetchProjects}
+                className="mt-2 text-sm text-red-700 underline hover:text-red-600"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <Briefcase className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Total Projects</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {projects.length}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-green-100 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Completed</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {projects.filter((p) => p.status === "Completed").length}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-yellow-100 rounded-lg">
+                <Clock className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">In Progress</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {projects.filter((p) => p.status === "In Progress").length}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-purple-100 rounded-lg">
+                <DollarSign className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Total Spent</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  $
+                  {projects
+                    .reduce((sum, p) => sum + (p.budget || 0), 0)
+                    .toFixed(2)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-6 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Recent Projects
+              </h2>
+              <button
+                onClick={() => setActiveTab("post-project")}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Post New Project
+              </button>
+            </div>
+          </div>
+          <div className="p-6">
+            {projects.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">
+                  No projects yet
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Get started by posting a new project.
+                </p>
+                <div className="mt-6">
+                  <button
+                    onClick={() => setActiveTab("post-project")}
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Post New Project
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {projects
+                  .filter((project) => project.status === "Open")
+                  .map((project) => (
+                    <div
+                      key={project.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 mb-2">
+                            {project.title}
+                          </h3>
+                          <p className="text-gray-600 text-sm mb-3">
+                            {project.description}
+                          </p>
+                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                            <span className="flex items-center">
+                              <DollarSign className="h-4 w-4 mr-1" />$
+                              {project.budget.toFixed(2)}
+                            </span>
+                            <span className="flex items-center">
+                              <Calendar className="h-4 w-4 mr-1" />
+                              {new Date(project.deadline).toLocaleDateString()}
+                            </span>
+                            <span className="flex items-center">
+                              <Users className="h-4 w-4 mr-1" />
+                              {project.bidCount} bids
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              project.status === "Open"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-blue-100 text-blue-800"
+                            }`}
+                          >
+                            {project.status}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSelectedProject(project);
+                              setActiveTab("bids");
+                            }}
+                            className="px-3 py-1 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                          >
+                            View Bids
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const PostProject = () => {
+    const [formData, setFormData] = useState({
+      title: "",
+      description: "",
+      budget: "",
+      deadline: null,
+      requiredSkills: [],
+    });
+    const [errors, setErrors] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitSuccess, setSubmitSuccess] = useState(false);
+
+    const handleInputChange = (field, value) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    };
+
+    const validateForm = () => {
+      const newErrors = {};
+      if (!formData.title.trim()) newErrors.title = "Title is required";
+      if (!formData.description.trim())
+        newErrors.description = "Description is required";
+      if (!formData.budget || isNaN(formData.budget))
+        newErrors.budget = "Valid budget is required";
+      if (!formData.deadline) newErrors.deadline = "Deadline is required";
+      if (!formData.requiredSkills.length)
+        newErrors.requiredSkills = "At least one skill is required";
+
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (!validateForm()) return;
+
+      setIsSubmitting(true);
+
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("Authentication required");
+        }
+
+        const requestData = {
+          title: formData.title,
+          description: formData.description,
+          budget: parseFloat(formData.budget),
+          deadline: formData.deadline.toISOString(),
+          requiredSkills: formData.requiredSkills,
+        };
+
+        const response = await API.post("/client/PostProject", requestData, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        setSubmitSuccess(true);
+        setFormData({
+          title: "",
+          description: "",
+          budget: "",
+          deadline: null,
+          requiredSkills: [],
+        });
+        fetchProjects();
+      } catch (error) {
+        console.error("Error creating project:", error);
+        setErrors({
+          submit: error.response?.data?.message || "Failed to create project",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    if (submitSuccess) {
+      return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-green-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            Project Created Successfully!
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Your project has been posted and is now visible to freelancers.
+          </p>
+          <div className="flex justify-center space-x-4">
+            <button
+              onClick={() => setSubmitSuccess(false)}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Post Another Project
+            </button>
+            <button
+              onClick={() => setActiveTab("dashboard")}
+              className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="p-6 border-b border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Post a New Project
+          </h2>
+          <p className="text-gray-600 mt-1">
+            Describe your project to attract the best freelancers
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Project Title *
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => handleInputChange("title", e.target.value)}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                errors.title ? "border-red-500" : "border-gray-300"
+              }`}
+              placeholder="Enter a descriptive project title"
+            />
+            {errors.title && (
+              <p className="text-red-500 text-sm mt-1">{errors.title}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Project Description *
+            </label>
+            <textarea
+              rows={6}
+              value={formData.description}
+              onChange={(e) => handleInputChange("description", e.target.value)}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                errors.description ? "border-red-500" : "border-gray-300"
+              }`}
+              placeholder="Describe your project in detail..."
+            />
+            {errors.description && (
+              <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Budget ($) *
+              </label>
+              <input
+                type="number"
+                value={formData.budget}
+                onChange={(e) => handleInputChange("budget", e.target.value)}
+                step="0.01"
+                min="0.01"
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.budget ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter project budget"
+              />
+              {errors.budget && (
+                <p className="text-red-500 text-sm mt-1">{errors.budget}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Deadline *
+              </label>
+              <CalendarDatePicker
+                selectedDate={formData.deadline}
+                onChange={(date) => handleInputChange("deadline", date)}
+              />
+              {errors.deadline && (
+                <p className="text-red-500 text-sm mt-1">{errors.deadline}</p>
+              )}
+              {formData.deadline && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Selected: {formData.deadline.toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Required Skills *
+            </label>
+            <input
+              type="text"
+              value={formData.requiredSkills.join(", ")}
+              onChange={(e) => {
+                const skills = e.target.value
+                  .split(",")
+                  .map((skill) => skill.trim());
+                handleInputChange(
+                  "requiredSkills",
+                  skills.filter((skill) => skill)
+                );
+              }}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                errors.requiredSkills ? "border-red-500" : "border-gray-300"
+              }`}
+              placeholder="e.g., React, Node.js, MongoDB (separate with commas)"
+            />
+            {errors.requiredSkills && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.requiredSkills}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2 mt-2">
+              {formData.requiredSkills
+                .filter((skill) => skill)
+                .map((skill, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                  >
+                    {skill}
+                  </span>
+                ))}
+            </div>
+          </div>
+
+          {errors.submit && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4">
+              <p className="text-red-700">{errors.submit}</p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setActiveTab("dashboard")}
+              className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFormData({
+                  title: "",
+                  description: "",
+                  budget: "",
+                  deadline: null,
+                  requiredSkills: [],
+                });
+                setErrors({});
+              }}
+              className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Clear Form
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                  Posting...
+                </>
+              ) : (
+                "Post Project"
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  };
+
+  const BidsView = () => {
+    const [projectBids, setProjectBids] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [agreeTerms, setAgreeTerms] = useState(false);
+    const [assigning, setAssigning] = useState(false);
+    const [assignError, setAssignError] = useState(null);
+    const [assignSuccess, setAssignSuccess] = useState(false);
+    const [selectedBid, setSelectedBid] = useState(null);
+
+    useEffect(() => {
+      const fetchProjectBids = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+
+          const token = localStorage.getItem("token");
+          if (!token) {
+            throw new Error("Authentication required");
+          }
+
+          const response = await API.get(
+            `/client/projects/${selectedProject.id}/bids`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (response.data.success) {
+            setProjectBids(response.data);
+          } else {
+            setError(response.data.message || "Failed to fetch bids");
+          }
+        } catch (err) {
+          console.error("Error fetching project bids:", err);
+          setError(err.response?.data?.message || "Failed to fetch bids");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      if (selectedProject) {
+        fetchProjectBids();
+      }
+    }, [selectedProject]);
+
+    const formatDate = (dateString) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    };
+
+    const getCountryName = (countryCode) => {
+      const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+      try {
+        return regionNames.of(countryCode) || countryCode;
+      } catch {
+        return countryCode;
+      }
+    };
+
+    const handleAssignProject = async () => {
+      if (!agreeTerms) {
+        setAssignError(
+          "You must agree to the terms before assigning the project"
+        );
+        return;
+      }
+
+      if (!selectedBid || !selectedProject) {
+        setAssignError("No bid or project selected");
+        return;
+      }
+
+      setAssigning(true);
+      setAssignError(null);
+
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("Authentication token not found");
+        }
+
+        const requestBody = {
+          projectId: selectedProject.id,
+          freelancerId: selectedBid.freelancerId,
+          clientId: clientData?.id, // Make sure clientData is available
+        };
+
+        const response = await API.post(
+          "/client/projects/assign",
+          requestBody,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.data.success) {
+          setAssignSuccess(true);
+          setProjects(
+            projects.map((project) =>
+              project.id === selectedProject.id
+                ? { ...project, status: "Assigned" }
+                : project
+            )
+          );
+          setTimeout(() => {
+            setShowAssignModal(false);
+            setAssignSuccess(false);
+            setAgreeTerms(false);
+            setSelectedBid(null);
+            if (activeTab === "assigned-projects") {
+              window.location.reload();
+            }
+          }, 2000);
+        } else {
+          throw new Error(response.data.message || "Failed to assign project");
+        }
+      } catch (error) {
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          "An error occurred while assigning the project";
+        setAssignError(errorMessage);
+      } finally {
+        setAssigning(false);
+      }
+    };
+
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <X className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (!projectBids) {
+      return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <p className="text-gray-600">No project selected</p>
+        </div>
+      );
+    }
+
+    if (projectBids.status === "NO_BIDS") {
+      return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Bids for "{projectBids.data.projectTitle}"
+          </h2>
+          <p className="text-gray-600">{projectBids.data.message}</p>
+        </div>
+      );
+    }
+
+    const filteredBids = projectBids.data.bids.filter(
+      (bid) =>
+        bid.freelancerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        bid.proposal.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        bid.skills.some((skill) =>
+          skill.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+    );
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Bids for "{projectBids.data.projectTitle}"
+              </h2>
+              <p className="text-gray-600 mt-1">
+                {projectBids.data.bids.length} freelancer
+                {projectBids.data.bids.length !== 1 ? "s have" : " has"}{" "}
+                submitted proposals
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search bids..."
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {filteredBids.map((bid) => (
+              <div
+                key={bid.bidId}
+                className="border border-gray-200 rounded-lg p-6 hover:border-blue-300 transition-colors"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-4 flex-1">
+                    <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                      <span className="text-gray-600 font-medium">
+                        {bid.freelancerName
+                          .split(" ")
+                          .map((name) => name[0])
+                          .join("")}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h3 className="font-semibold text-gray-900">
+                          {bid.freelancerName}
+                        </h3>
+                      </div>
+                      <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
+                        <span className="flex items-center">
+                          <MapPin className="h-4 w-4 mr-1" />
+                          {bid.city}, {getCountryName(bid.country)}
+                        </span>
+                      </div>
+                      <p className="text-gray-700 mb-3 line-clamp-2">
+                        {bid.proposal}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {bid.skills.map((skill, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right ml-6">
+                    <div className="mb-4">
+                      <p className="text-2xl font-bold text-gray-900">
+                        ${bid.amount.toFixed(2)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        in {bid.deliveryDays} day
+                        {bid.deliveryDays !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log("Assign button clicked"); // Debug log
+                          setSelectedBid(bid);
+                          setShowAssignModal(true);
+                        }}
+                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Assign Project
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Submitted {formatDate(bid.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {showAssignModal && selectedBid && selectedProject && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    Assign Project
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowAssignModal(false);
+                      setAgreeTerms(false);
+                      setAssignError(null);
+                      setAssignSuccess(false);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {assignSuccess ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                    <h4 className="text-lg font-semibold text-green-900 mb-1">
+                      Project Assigned Successfully!
+                    </h4>
+                    <p className="text-green-700">
+                      The freelancer has been notified and can now start working
+                      on your project.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setShowAssignModal(false);
+                        setAssignSuccess(false);
+                      }}
+                      className="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Project Details Section */}
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-900 mb-2 flex items-center">
+                        <FileText className="h-5 w-5 mr-2" />
+                        Project Details
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4 mt-3">
+                        <div>
+                          <p className="text-sm text-blue-700">Project Title</p>
+                          <p className="font-medium">{selectedProject.title}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-blue-700">Status</p>
+                          <p className="font-medium">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                              {selectedProject.status}
+                            </span>
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-blue-700">Budget</p>
+                          <p className="font-medium">
+                            ${selectedProject.budget?.toFixed(2)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-blue-700">Deadline</p>
+                          <p className="font-medium">
+                            {selectedProject.deadline
+                              ? new Date(
+                                  selectedProject.deadline
+                                ).toLocaleDateString()
+                              : "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <p className="text-sm text-blue-700">Description</p>
+                        <p className="text-blue-800 text-sm mt-1">
+                          {selectedProject.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Freelancer Details Section */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                        <User className="h-5 w-5 mr-2" />
+                        Freelancer Details
+                      </h4>
+                      <div className="flex items-start space-x-4">
+                        <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                          <span className="text-gray-600 font-medium text-lg">
+                            {selectedBid.freelancerName
+                              ?.split(" ")
+                              .map((name) => name[0])
+                              .join("")}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <h5 className="font-semibold text-gray-900 mb-1">
+                            {selectedBid.freelancerName || "N/A"}
+                          </h5>
+                          <div className="grid grid-cols-2 gap-4 mt-3">
+                            <div>
+                              <p className="text-sm text-gray-500">
+                                Bid Amount
+                              </p>
+                              <p className="font-medium">
+                                ${selectedBid.amount?.toFixed(2) || "0.00"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-500">
+                                Delivery Time
+                              </p>
+                              <p className="font-medium">
+                                {selectedBid.deliveryDays || "0"} day
+                                {selectedBid.deliveryDays !== 1 ? "s" : ""}
+                              </p>
+                            </div>
+                            {selectedBid.city && (
+                              <div>
+                                <p className="text-sm text-gray-500">
+                                  Location
+                                </p>
+                                <p className="font-medium">
+                                  {selectedBid.city}
+                                  {selectedBid.country
+                                    ? `, ${getCountryName(selectedBid.country)}`
+                                    : ""}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-3">
+                            <p className="text-sm text-gray-500">Proposal:</p>
+                            <p className="text-gray-700 text-sm bg-white p-3 rounded border">
+                              {selectedBid.proposal || "No proposal provided"}
+                            </p>
+                          </div>
+                          {selectedBid.skills?.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-sm text-gray-500">Skills:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {selectedBid.skills.map((skill, index) => (
+                                  <span
+                                    key={index}
+                                    className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                                  >
+                                    {skill}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Terms Agreement Section */}
+                    <div className="flex items-start space-x-3">
+                      <input
+                        type="checkbox"
+                        id="terms"
+                        checked={agreeTerms}
+                        onChange={(e) => setAgreeTerms(e.target.checked)}
+                        className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor="terms" className="text-sm text-gray-600">
+                        I agree to assign this project to{" "}
+                        {selectedBid.freelancerName} for $
+                        {selectedBid.amount?.toFixed(2)}
+                        with a delivery time of {selectedBid.deliveryDays} days.
+                        I understand that payment will be processed according to
+                        the agreed terms and project milestones.
+                      </label>
+                    </div>
+
+                    {assignError && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex">
+                          <X className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                          <p className="text-red-700 text-sm">{assignError}</p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {!assignSuccess && (
+                <div className="p-6 border-t border-gray-100 flex items-center justify-end space-x-4">
+                  <button
+                    onClick={() => {
+                      setShowAssignModal(false);
+                      setAgreeTerms(false);
+                      setAssignError(null);
+                    }}
+                    disabled={assigning}
+                    className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAssignProject}
+                    disabled={assigning || !agreeTerms}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+                  >
+                    {assigning ? (
+                      <>
+                        <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                        Assigning...
+                      </>
+                    ) : (
+                      "Assign Project"
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const AssignedProjects = () => {
+    const [assignedProjects, setAssignedProjects] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+      const fetchAssignedProjects = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+
+          const token = localStorage.getItem("token");
+          if (!token) {
+            throw new Error("Authentication required");
+          }
+
+          const response = await API.get("/client/projects/with-status", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.data.success) {
+            const filteredProjects = response.data.data.filter(
+              (project) => project.status !== "Open"
+            );
+            setAssignedProjects(filteredProjects);
+          } else {
+            setError(
+              response.data.message || "Failed to fetch assigned projects"
+            );
+          }
+        } catch (err) {
+          console.error("Error fetching assigned projects:", err);
+          setError(
+            err.response?.data?.message || "Failed to fetch assigned projects"
+          );
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchAssignedProjects();
+    }, []);
+
+    const formatDate = (dateString) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    };
+
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <X className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-2 text-sm text-red-700 underline hover:text-red-600"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-6 border-b border-gray-100">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Assigned Projects
+            </h2>
+            <p className="text-gray-600 mt-1">
+              Projects you've assigned to freelancers
+            </p>
+          </div>
+          <div className="p-6">
+            {assignedProjects.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">
+                  No assigned projects yet
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Assign a project to a freelancer to see it here.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {assignedProjects.map((project) => (
+                  <div
+                    key={project.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-2">
+                          {project.title}
+                        </h3>
+                        <p className="text-gray-600 text-sm mb-3">
+                          {project.description}
+                        </p>
+                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <span className="flex items-center">
+                            <DollarSign className="h-4 w-4 mr-1" />$
+                            {project.budget.toFixed(2)}
+                          </span>
+                          <span className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            Due: {formatDate(project.deadline)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                          {project.status}
+                        </span>
+                        <button
+                          onClick={() => setSelectedAssignedProject(project)}
+                          className="px-3 py-1 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                    {project.assignedAt && (
+                      <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
+                        Assigned on: {formatDate(project.assignedAt)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const AssignedProjectDetails = ({ project, onClose }) => {
+    const [assignedProject, setAssignedProject] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+      const fetchAssignedProject = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+
+          const token = localStorage.getItem("token");
+          if (!token) {
+            throw new Error("Authentication required");
+          }
+
+          const response = await API.get(
+            `/client/project-details/${project.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (response.data.success) {
+            setAssignedProject(response.data.data);
+          } else {
+            setError(
+              response.data.message || "Failed to fetch assigned project"
+            );
+          }
+        } catch (err) {
+          console.error("Error fetching assigned project:", err);
+          setError(
+            err.response?.data?.message ||
+              err.message ||
+              "Failed to fetch assigned project"
+          );
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchAssignedProject();
+    }, [project.id]);
+
+    const formatDate = (dateString) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    };
+
+    const getCountryName = (countryCode) => {
+      const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+      try {
+        return regionNames.of(countryCode) || countryCode;
+      } catch {
+        return countryCode;
+      }
+    };
+
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <X className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (!assignedProject) {
+      return <div>No project data available</div>;
+    }
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 max-w-2xl w-full">
+        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-900">
+            {project.title}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          <div className="bg-blue-50 rounded-lg p-4">
+            <h3 className="font-semibold text-blue-900 mb-2">
+              Project Summary
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-blue-700">Status</p>
+                <p className="font-medium">
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${
+                      project.status === "Assigned"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-green-100 text-green-800"
+                    }`}
+                  >
+                    {project.status}
+                  </span>
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-blue-700">Budget</p>
+                <p className="font-medium">${project.budget?.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-blue-700">Deadline</p>
+                <p className="font-medium">{formatDate(project.deadline)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Freelancer Information
+            </h3>
+
+            <div className="flex items-start space-x-6">
+              <div className="flex-shrink-0">
+                <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
+                  {assignedProject.freelancer.name ? (
+                    <span className="text-2xl font-medium text-gray-600">
+                      {assignedProject.freelancer.name
+                        .split(" ")
+                        .map((name) => name[0])
+                        .join("")}
+                    </span>
+                  ) : (
+                    <User className="h-10 w-10 text-gray-400" />
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-1 space-y-4">
+                <div>
+                  <h4 className="font-semibold text-gray-900 text-lg">
+                    {assignedProject.freelancer.name || "No name provided"}
+                  </h4>
+                  {assignedProject.freelancer.title && (
+                    <p className="text-gray-600">
+                      {assignedProject.freelancer.title}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {assignedProject.freelancer.email && (
+                    <div>
+                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="flex items-center text-gray-900">
+                        <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                        {assignedProject.freelancer.email}
+                      </p>
+                    </div>
+                  )}
+
+                  {assignedProject.freelancer.phone && (
+                    <div>
+                      <p className="text-sm text-gray-500">Phone</p>
+                      <p className="flex items-center text-gray-900">
+                        <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                        {assignedProject.freelancer.phone}
+                      </p>
+                    </div>
+                  )}
+
+                  {(project.freelancerCity || project.freelancerCountry) && (
+                    <div>
+                      <p className="text-sm text-gray-500">Location</p>
+                      <p className="flex items-center text-gray-900">
+                        <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                        {[
+                          project.freelancerCity,
+                          getCountryName(project.freelancerCountry),
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
+                    </div>
+                  )}
+
+                  {project.bidAmount && (
+                    <div>
+                      <p className="text-sm text-gray-500">Bid Amount</p>
+                      <p className="flex items-center text-gray-900">
+                        <DollarSign className="h-4 w-4 mr-2 text-gray-400" />$
+                        {project.bidAmount.toFixed(2)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const Settings = () => {
+    const [isLoading, setSaveLoading] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+    const [formData, setFormData] = useState({
+      phone: "",
+      company: "",
+      notifications: {
+        newBids: true,
+        projectUpdates: true,
+      },
+    });
+
+    // Initialize form data when clientData is available
+    useEffect(() => {
+      if (clientData) {
+        setFormData({
+          phone: clientData.phoneNumber || "",
+          company: clientData.companyName || "",
+          notifications: {
+            newBids: true,
+            projectUpdates: true,
+          },
+        });
+      }
+    }, [clientData]);
+
+    const handleInputChange = (field, value) => {
+      if (field.includes(".")) {
+        // Handle nested fields like notifications.newBids
+        const [parent, child] = field.split(".");
+        setFormData((prev) => ({
+          ...prev,
+          [parent]: {
+            ...prev[parent],
+            [child]: value,
+          },
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          [field]: value,
+        }));
+      }
+    };
+
+    const handleReset = () => {
+      if (clientData) {
+        setFormData({
+          phone: clientData.phoneNumber || "",
+          company: clientData.companyName || "",
+          notifications: {
+            newBids: true,
+            projectUpdates: true,
+          },
+        });
+      }
+    };
+
+    const handleSaveSettings = async () => {
+      setSaveLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("Authentication required");
+        }
+
+        const response = await API.put(
+          "/client/profile",
+          {
+            phoneNumber: formData.phone,
+            companyName: formData.company,
+            // Add notification preferences if needed
+            notificationPreferences: formData.notifications,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.data.success) {
+          setSaveSuccess(true);
+          await new promise((resolve) => setTimeout(resolve, 3000));
+          // Update client data in state
+          setClientData({
+            ...clientData,
+            phoneNumber: formData.phone,
+            companyName: formData.company,
+          });
+          // Hide success message after 3 seconds
+          setTimeout(() => setSaveSuccess(false), 3000);
+        } else {
+          throw new Error(response.data.message || "Failed to save settings");
+        }
+      } catch (error) {
+        console.error("Error saving settings:", error);
+      } finally {
+        setSaveLoading(false);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-6 border-b border-gray-100">
+            <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
+            <p className="text-gray-600 mt-1">
+              Manage your account and preferences
+            </p>
+          </div>
+          <div className="px-6 py-4">
+            <nav className="flex space-x-8">
+              {[
+                { id: "profile", label: "Profile", icon: User },
+                { id: "security", label: "Security", icon: Shield },
+                { id: "billing", label: "Billing", icon: CreditCard },
+              ].map((section) => {
+                const Icon = section.icon;
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => setActiveSettingsSection(section.id)}
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      activeSettingsSection === section.id
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 mr-2" />
+                    {section.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+
+        {/* Success message popup - moved to top of return */}
+        {saveSuccess && (
+          <div className="fixed bottom-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-lg z-50">
+            <div className="flex items-center">
+              <CheckCircle className="h-5 w-5 mr-2" />
+              Settings saved successfully!
+            </div>
+          </div>
+        )}
+
+        {activeSettingsSection === "profile" && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Profile Settings
+              </h3>
+              <p className="text-gray-600 mt-1">
+                Update your personal information and profile details
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-1">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="relative">
+                      <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                        <User className="h-12 w-12 text-blue-600" />
+                      </div>
+                      <button className="absolute bottom-4 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition-colors">
+                        <Camera className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <h3 className="font-semibold text-gray-900">
+                      {clientData?.personName}
+                    </h3>
+
+                    <div className="mt-4 flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-green-600">Online</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        First Name
+                      </label>
+                      <input
+                        type="text"
+                        disabled
+                        value={clientData?.personName.split(" ")[0]}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        disabled
+                        value={clientData?.personName.split(" ")[1]}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={clientData?.email}
+                      disabled
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        handleInputChange("phone", e.target.value)
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Company
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.company}
+                      onChange={(e) =>
+                        handleInputChange("company", e.target.value)
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSettingsSection === "security" && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">Security</h3>
+              <p className="text-gray-600 mt-1">
+                Manage your account security and authentication settings
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <button className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-center">
+                  <Shield className="h-5 w-5 text-gray-400 mr-3" />
+                  <div className="text-left">
+                    <span className="font-medium text-gray-900">
+                      Change Password
+                    </span>
+                    <p className="text-sm text-gray-600">
+                      Update your account password
+                    </p>
+                  </div>
+                </div>
+                <span className="text-gray-400">›</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeSettingsSection === "billing" && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">Billing</h3>
+              <p className="text-gray-600 mt-1">
+                Manage your payment methods and billing information
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <button className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-center">
+                  <CreditCard className="h-5 w-5 text-gray-400 mr-3" />
+                  <div className="text-left">
+                    <span className="font-medium text-gray-900">
+                      Payment Methods
+                    </span>
+                    <p className="text-sm text-gray-600">
+                      Manage your payment options
+                    </p>
+                  </div>
+                </div>
+                <span className="text-gray-400">›</span>
+              </button>
+              <button className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-center">
+                  <FileText className="h-5 w-5 text-gray-400 mr-3" />
+                  <div className="text-left">
+                    <span className="font-medium text-gray-900">
+                      Billing History
+                    </span>
+                    <p className="text-sm text-gray-600">
+                      View your payment history
+                    </p>
+                  </div>
+                </div>
+                <span className="text-gray-400">›</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {(activeSettingsSection === "profile" ||
+          activeSettingsSection === "notifications") && (
+          <div className="flex justify-end space-x-4">
+            <button
+              onClick={handleReset}
+              className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Reset to Default
+            </button>
+            <button
+              onClick={handleSaveSettings}
+              disabled={isLoading}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+            >
+              {isLoading ? (
+                <>
+                  <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const ProfileDropdown = () => (
+    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50 transform opacity-100 scale-100 transition-all duration-200">
+      <div className="p-6 border-b border-gray-100">
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <User className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-gray-900">
+              {clientData?.personName || "User"}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {clientData?.email || "user@example.com"}
+            </p>
+            <div className="flex items-center mt-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="py-2">
+        <div className="px-3 py-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Account
+          </p>
+        </div>
+
+        <button
+          onClick={() => {
+            setActiveTab("settings");
+            setActiveSettingsSection("profile");
+            setShowProfileDropdown(false);
+          }}
+          className="w-full flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <User className="h-4 w-4 mr-3 text-gray-400" />
+          Profile Settings
+        </button>
+
+        <button
+          className="w-full flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          onClick={() => {
+            setActiveTab("dashboard");
+            setShowProfileDropdown(false);
+          }}
+        >
+          <Briefcase className="h-4 w-4 mr-3 text-gray-400" />
+          My Projects
+        </button>
+
+        <div className="border-t border-gray-100 mt-2">
+          <div className="px-3 py-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Billing
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              setActiveTab("settings");
+              setActiveSettingsSection("billing");
+              setShowProfileDropdown(false);
+            }}
+            className="w-full flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <CreditCard className="h-4 w-4 mr-3 text-gray-400" />
+            Payment Methods
+          </button>
+
+          <button className="w-full flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+            <FileText className="h-4 w-4 mr-3 text-gray-400" />
+            Billing History
+          </button>
+        </div>
+
+        <div className="border-t border-gray-100 mt-2">
+          <div className="px-3 py-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Settings
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              setActiveTab("settings");
+              setActiveSettingsSection("security");
+              setShowProfileDropdown(false);
+            }}
+            className="w-full flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <Shield className="h-4 w-4 mr-3 text-gray-400" />
+            Security
+          </button>
+        </div>
+
+        <div className="border-t border-gray-100 mt-2">
+          <button className="w-full flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+            <HelpCircle className="h-4 w-4 mr-3 text-gray-400" />
+            Help & Support
+          </button>
+        </div>
+
+        <div className="border-t border-gray-100 mt-2">
+          <button
+            onClick={() => {
+              setShowProfileDropdown(false);
+              setShowLogoutModal(true);
+            }}
+            className="w-full flex items-center px-6 py-3 text-sm text-red-700 hover:bg-red-50 transition-colors"
+          >
+            <LogOut className="h-4 w-4 mr-3 text-red-400" />
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const LogoutConfirmationModal = () => {
+    if (!showLogoutModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-gray-900">
+              Confirm Logout
+            </h3>
+            <button
+              onClick={() => setShowLogoutModal(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          <p className="text-gray-600 mb-6">
+            Are you sure you want to log out? You'll need to sign in again to
+            access your account.
+          </p>
+
+          <div className="flex justify-end space-x-4">
+            <button
+              onClick={() => setShowLogoutModal(false)}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                window.location.href = "/login";
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Log Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <h1 className="ml-3 text-xl font-semibold text-gray-900">
+                Freelancer Hub
+              </h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="relative" ref={profileDropdownRef}>
+                <button
+                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <User className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <ChevronDown
+                    className={`h-4 w-4 text-gray-400 transition-transform ${
+                      showProfileDropdown ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {showProfileDropdown && <ProfileDropdown />}
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex gap-8">
+          <div className="w-64 bg-white rounded-xl shadow-sm border border-gray-100 h-fit">
+            <nav className="p-6">
+              <div className="space-y-2">
+                {[
+                  { id: "dashboard", label: "Dashboard", icon: FileText },
+                  {
+                    id: "post-project",
+                    label: "Post Project",
+                    icon: PlusCircle,
+                  },
+                  {
+                    id: "assigned-projects",
+                    label: "Assigned Projects",
+                    icon: CheckCircle,
+                  },
+                  { id: "settings", label: "Settings", icon: SettingsIcon },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${
+                        activeTab === item.id
+                          ? "bg-blue-50 text-blue-700 border border-blue-200"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <Icon className="h-5 w-5 mr-3" />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
+          </div>
+
+          <div className="flex-1">
+            {activeTab === "dashboard" && <Dashboard />}
+            {activeTab === "post-project" && <PostProject />}
+            {activeTab === "bids" && <BidsView />}
+            {activeTab === "assigned-projects" && <AssignedProjects />}
+            {activeTab === "settings" && <Settings />}
+          </div>
+        </div>
+      </div>
+
+      {showLogoutModal && <LogoutConfirmationModal />}
+      {selectedAssignedProject && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <AssignedProjectDetails
+            project={selectedAssignedProject}
+            onClose={() => setSelectedAssignedProject(null)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ClientDashboard;
