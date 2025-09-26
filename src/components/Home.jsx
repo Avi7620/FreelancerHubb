@@ -14,12 +14,12 @@ const Home = () => {
     <>
       <CssBaseline />
       <Box component="main">
-        <Hero />
-        <HowItWorks />
-        <TrendingServices />
-        <BrowseTalent />
-        <TalentStats />
-        <Testimonials />
+        <section id="hero"><Hero /></section>
+        <section id="howitworks"><HowItWorks /></section>
+        <section id="trending"><TrendingServices /></section>
+        <section id="browse"><BrowseTalent /></section>
+        <section id="stats"><TalentStats /></section>
+        <section id="testimonials"><Testimonials /></section>
       </Box>
     </>
   );

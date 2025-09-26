@@ -126,7 +126,7 @@ const Footer = () => (
         }}
       >
         <Typography variant="body2" sx={{ opacity: 0.8 }}>
-          © Freeio. {new Date().getFullYear()} CreativeLayers. All rights
+          © Freeio. {new Date().getFullYear()} FreelancerHub. All rights
           reserved.
         </Typography>
         <Box sx={{ mt: { xs: 2, sm: 0 } }}>

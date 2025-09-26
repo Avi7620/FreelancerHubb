@@ -14,12 +14,14 @@ import MenuIcon from "@mui/icons-material/Menu";
 import { useNavigate } from "react-router-dom";
 import Spinner from "../common/Spinner";
 
+// ✅ Navbar items now match Home.jsx sections
 const navItems = [
-  { label: "Home", path: "/" },
-  { label: "Browse Jobs", path: "/jobs" },
-  { label: "Users", path: "/users" },
-  { label: "Blog", path: "/blog" },
-  { label: "Pages", path: "/pages" },
+  { label: "Home", id: "hero" },
+  { label: "How It Works", id: "howitworks" },
+  { label: "Trending Services", id: "trending" },
+  { label: "Browse Talent", id: "browse" },
+  { label: "Talent Stats", id: "stats" },
+  { label: "Testimonials", id: "testimonials" },
 ];
 
 const Navbar = () => {
@@ -27,17 +29,13 @@ const Navbar = () => {
   const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
 
-  const handleNavigation = (path, withDelay = false) => {
-    if (withDelay) setLoading(true);
-
-    setTimeout(
-      () => {
-        navigate(path);
-        if (withDelay) setLoading(false);
-        setMobileMenuAnchor(null);
-      },
-      withDelay ? 1000 : 0
-    );
+  // Smooth scroll to section
+  const handleScroll = (id) => {
+    const section = document.getElementById(id);
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth" });
+      setMobileMenuAnchor(null);
+    }
   };
 
   if (loading) return <Spinner />;
@@ -58,7 +56,7 @@ const Navbar = () => {
             }}
             onClick={() => navigate("/")}
           >
-            Freelancer Hub
+            FreelancerHub
           </Typography>
 
           {/* Desktop Navigation */}
@@ -68,28 +66,22 @@ const Navbar = () => {
                 key={item.label}
                 color="inherit"
                 sx={{ color: "text.primary" }}
-                onClick={() => handleNavigation(item.path)}
+                onClick={() => handleScroll(item.id)}
               >
                 {item.label}
               </Button>
             ))}
-          </Box>
-
-          <Box sx={{ display: { xs: "none", md: "flex" }, gap: 2, ml: 2 }}>
-            <Button variant="outlined" color="primary">
-              Become a Seller
-            </Button>
             <Button
               variant="contained"
               color="secondary"
-              onClick={() => handleNavigation("/login")}
+              onClick={() => navigate("/login")}
             >
               Login
             </Button>
             <Button
               variant="contained"
               color="primary"
-              onClick={() => handleNavigation("/signup", true)}
+              onClick={() => navigate("/signup", true)}
             >
               Sign Up
             </Button>
@@ -114,17 +106,13 @@ const Navbar = () => {
             {navItems.map((item) => (
               <MenuItem
                 key={item.label}
-                onClick={() => handleNavigation(item.path)}
+                onClick={() => handleScroll(item.id)}
               >
                 {item.label}
               </MenuItem>
             ))}
-            <MenuItem onClick={() => handleNavigation("/login")}>
-              Login
-            </MenuItem>
-            <MenuItem onClick={() => handleNavigation("/register", true)}>
-              Sign Up
-            </MenuItem>
+            <MenuItem onClick={() => navigate("/login")}>Login</MenuItem>
+            <MenuItem onClick={() => navigate("/signup", true)}>Sign Up</MenuItem>
           </Menu>
         </Toolbar>
       </Container>

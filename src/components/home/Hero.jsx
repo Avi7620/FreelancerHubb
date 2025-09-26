@@ -20,7 +20,7 @@ const Hero = () => {
                 color: "text.primary",
               }}
             >
-              Hire the mobile freelancers for
+              Hire the  freelancers for
               <br />
               any project.
             </Typography>
