@@ -26,7 +26,7 @@ const testimonials = [
       "The Android developer I hired through Freeio delivered our app on time and within budget. His insights actually improved our initial concept significantly.",
     name: "James Wilson",
     role: "Product Manager",
-    avatar: "https://i.pravatar.cc/150?img=2",
+    avatar: "",
   },
   {
     quote:

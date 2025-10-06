@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { User, Check, Mail, Lock, Phone, MapPin, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import API from "../../services/api";
+import { useEffect } from "react";
 
 const ClientSignup = () => {
   const [loading, setLoading] = useState(false);
@@ -104,9 +105,11 @@ const ClientSignup = () => {
     }
   };
 
+useEffect(() => {
   if (success) {
     navigate("/login");
   }
+}, [success, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
